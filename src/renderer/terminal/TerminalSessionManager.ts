@@ -84,6 +84,7 @@ export class TerminalSessionManager {
   >();
   private firstFrameRendered = false;
   private ptyStarted = false;
+  private ptyInitialized = false;
   private lastSnapshotAt: number | null = null;
   private lastSnapshotReason: 'interval' | 'detach' | 'dispose' | null = null;
   private customFontFamily = '';
@@ -305,8 +306,6 @@ export class TerminalSessionManager {
       () => inputDisposable.dispose(),
       () => resizeDisposable.dispose()
     );
-
-    void this.initializeTerminal();
   }
 
   attach(container: HTMLElement) {
@@ -327,6 +326,16 @@ export class TerminalSessionManager {
         element.style.width = '100%';
         element.style.height = '100%';
       }
+    }
+
+    // Immediately fit the terminal to the container now that it's DOM-attached
+    this.fitPreservingViewport();
+
+    // Now that we have the real dimensions, initialize the PTY if we haven't yet
+    if (!this.ptyInitialized) {
+      this.ptyInitialized = true;
+      this.options.initialSize = { cols: this.terminal.cols, rows: this.terminal.rows };
+      void this.initializeTerminal();
     }
 
     this.scheduleFit();
